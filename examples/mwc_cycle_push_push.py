@@ -23,10 +23,11 @@ from bioptim import (
     PhaseDynamics,
     HolonomicConstraintsList,
     InterpolationType,
+    DynamicsFcn,
 )
 from wheelchair_utils.custom_biorbd_model_holonomic import BiorbdModelCustomHolonomic
 from wheelchair_utils.dynamics import compute_all_states_from_indep_qu
-from wheelchair_utils.dynamics import holonomic_torque_driven_state_space_dynamics, configure_holonomic_torque_driven
+# from wheelchair_utils.dynamics import holonomic_torque_driven_state_space_dynamics, configure_holonomic_torque_driven
 from wheelchair_utils.holonomic_constraints import generate_close_loop_constraint, generate_rolling_joint_constraint
 
 
@@ -118,14 +119,12 @@ def prepare_ocp(
     # Dynamics
     dynamics = DynamicsList()
     dynamics.add(
-        configure_holonomic_torque_driven,
-        dynamic_function=holonomic_torque_driven_state_space_dynamics,
+        DynamicsFcn.HOLONOMIC_TORQUE_DRIVEN,
         phase_dynamics=PhaseDynamics.SHARED_DURING_THE_PHASE,
         phase=0,
     )
     dynamics.add(
-        configure_holonomic_torque_driven,
-        dynamic_function=holonomic_torque_driven_state_space_dynamics,
+        DynamicsFcn.HOLONOMIC_TORQUE_DRIVEN,
         phase_dynamics=PhaseDynamics.SHARED_DURING_THE_PHASE,
         phase=1,
     )
@@ -227,13 +226,15 @@ def main():
 
     # # --- Show results --- #
     q, qdot, qddot, lambdas = compute_all_states_from_indep_qu(sol, bio_model, variable_bimapping)
-    #
-    import bioviz
 
-    q_cycle = np.hstack(q)
-    viz = bioviz.Viz(model_path)
-    viz.load_movement(q_cycle)
-    viz.exec()
+    from pyorerun import PhaseRerun, BiorbdModel
+
+    prr = PhaseRerun(t_span=np.array([i for i in range(31)]))
+    m = BiorbdModel("models/wheelchair_model.bioMod")
+    prr.add_animated_model(m, q[0])
+    prr.rerun()
+
+    # sol.animate(viewer="pyorerun")
 
 
 if __name__ == "__main__":
